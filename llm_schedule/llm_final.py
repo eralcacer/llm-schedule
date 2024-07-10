@@ -9,7 +9,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain.chains.question_answering import load_qa_chain
 
 from dotenv import load_dotenv
@@ -18,21 +18,16 @@ import os
 
 load_dotenv()
 
-openai.api_key = os.getenv("OPEN_API_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 chat = ChatOpenAI(model="gpt-3.5-turbo-0125")
-
-class ChatMessage:
-    def __init__(self, role, content):
-        self.role = role
-        self.content = content
 
 class MeetingSheduler:
     def __init__(self):
         # self.drive_api = DriveAPI()
-        self.chat_history = [("assistant","An appointment with Enrique on July 7th at 2:30 PM is created.")]
+        self.chat_history = [HumanMessage(content='Is Enrique available on July 7th at 2:30 PM?'), AIMessage(content='True, Enrique is available on July 7th at 2:30 PM. A meeting with Enrique has been schedule for July 7th at 2:30 PM.', response_metadata={'token_usage': {'completion_tokens': 17, 'prompt_tokens': 656, 'total_tokens': 673}, 'model_name': 'gpt-3.5-turbo-0125', 'system_fingerprint': None, 'finish_reason': 'stop', 'logprobs': None}, id='run-81a77cf9-5103-4ddb-932f-c0967d6a7eed-0')]
         
-        self.loader = TextLoader("../content.txt")
+        self.loader = TextLoader("./content.txt")
         self.doc = self.loader.load()
 
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=10)
@@ -109,14 +104,11 @@ class MeetingSheduler:
         else:
             return input["input"]
 
-    def start(self):
-        query = "Is Enrique available on July 7th at 2:30 PM?"
-
+    def start(self, query):
         response = self.rag_chain.invoke({"input": query, "chat_history": self.chat_history})
         self.chat_history.extend([HumanMessage(content=query), response])
-
         print(response.content)
 
-if __name__ == "__main__":
-    scheduler = MeetingSheduler()
-    scheduler.start()
+# if __name__ == "__main__":
+#     scheduler = MeetingSheduler()
+#     scheduler.start()
