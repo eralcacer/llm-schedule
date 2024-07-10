@@ -13,7 +13,6 @@ beautifulsoup4==4.12.3
 bs4==0.0.2
 build==1.2.1
 cachetools==5.3.3
-certifi @ file:///private/tmp/certifi-20240307-5056-x39hdm/certifi-2024.2.2
 charset-normalizer==3.3.2
 chroma-hnswlib==0.7.3
 chromadb==0.4.24
@@ -27,7 +26,6 @@ decorator==5.1.1
 Deprecated==1.2.14
 distro==1.9.0
 dnspython==2.6.1
-docutils @ file:///private/tmp/docutils-20231212-38497-757sjv/docutils-0.20.1
 email_validator==2.1.1
 executing==1.2.0
 faiss-cpu==1.8.0
@@ -85,7 +83,6 @@ multidict==6.0.5
 mypy-extensions==1.0.0
 nest-asyncio==1.5.7
 networkx==3.3
-numpy @ file:///private/tmp/numpy-20240206-5996-spmzje/numpy-1.26.4
 oauthlib==3.2.2
 onnxruntime==1.17.3
 openai==1.25.1

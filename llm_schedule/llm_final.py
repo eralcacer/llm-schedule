@@ -9,7 +9,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain.chains.question_answering import load_qa_chain
 
 from dotenv import load_dotenv
@@ -18,21 +18,17 @@ import os
 
 load_dotenv()
 
-openai.api_key = os.getenv("OPEN_API_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 chat = ChatOpenAI(model="gpt-3.5-turbo-0125")
 
-class ChatMessage:
-    def __init__(self, role, content):
-        self.role = role
-        self.content = content
-
-class MeetingSheduler:
+class MeetingScheduler:
     def __init__(self):
         # self.drive_api = DriveAPI()
-        self.chat_history = [("assistant","An appointment with Enrique on July 7th at 2:30 PM is created.")]
-        
-        self.loader = TextLoader("../content.txt")
+        # self.chat_history = [HumanMessage(content='Is Enrique available on July 7th at 2:30 PM?'), AIMessage(content='True, Enrique is available on July 7th at 2:30 PM. A meeting with Enrique has been schedule for July 7th at 2:30 PM.', response_metadata={'token_usage': {'completion_tokens': 17, 'prompt_tokens': 656, 'total_tokens': 673}, 'model_name': 'gpt-3.5-turbo-0125', 'system_fingerprint': None, 'finish_reason': 'stop', 'logprobs': None}, id='run-81a77cf9-5103-4ddb-932f-c0967d6a7eed-0')]
+        self.chat_history = []
+
+        self.loader = TextLoader("./content.txt")
         self.doc = self.loader.load()
 
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=10)
@@ -70,7 +66,6 @@ class MeetingSheduler:
 
         self.template_rag = """
         Answer the user's questions based on the below context.
-        Insert to the beginning of the response a way to indicate if the meeting could have been created or not with a "True" for yes or "False" for no.
         Based on the document's information, you need to find if a user that chats with you can schedule a meeting with Enrique Alcacer. 
         Assume that if the context doesn't contain information about a specified time and day in the question, Enrique is available.
         If according to the context, the specified time by the question Enrique not is available, give suggestions when Enrique is free based on the context.
@@ -90,12 +85,33 @@ class MeetingSheduler:
                 ("human", "{input}"),
             ]
         )
+
+        self.question_answering_schedule_prompt = """
+        Please analyze the query and the provided context to determine if the user wants to make an appointment with Enrique Alcacer and if the appointment can be scheduled.
+        1. If the user wants to schedule a meeting and the meeting can be scheduled, respond with "True".
+        2. If the user wants to schedule a meeting but the meeting cannot be scheduled, respond with "False".
+        3. If the user does not want to schedule a meeting or if the context does not specify scheduling details, provide a summary of the information in 50 characters.
+        
+        Context:
+        {context}
+        """
+
+
+        self.question_answering_schedule_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    self.question_answering_schedule_prompt
+                ),
+                MessagesPlaceholder(variable_name="messages")
+            ]
+        )
         
         self.retriever_chain = RunnablePassthrough.assign(
             context=self.contextualized_question | self.retriever
         )
 
-        self.document_chain = create_stuff_documents_chain(chat, self.question_answering_prompt)
+        self.document_chain = self.question_answering_schedule_prompt | chat
 
         self.rag_chain = (
                             self.retriever_chain
@@ -109,14 +125,16 @@ class MeetingSheduler:
         else:
             return input["input"]
 
-    def start(self):
-        query = "Is Enrique available on July 7th at 2:30 PM?"
-
+    def submit_new_query(self, query):
         response = self.rag_chain.invoke({"input": query, "chat_history": self.chat_history})
+        response_is_meting_scheduled = self.document_chain.invoke(
+            {
+                "context": response.content,
+                "messages": [
+                    HumanMessage(content=query)
+                ]
+            }
+        )
         self.chat_history.extend([HumanMessage(content=query), response])
 
-        print(response.content)
-
-if __name__ == "__main__":
-    scheduler = MeetingSheduler()
-    scheduler.start()
+        return response.content, response_is_meting_scheduled.content
