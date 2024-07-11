@@ -2,3 +2,6 @@
 myenv
 __pycache__/
 *.py[cod]
+credentials.json
+token.pickle
+content.txt
