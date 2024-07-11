@@ -124,6 +124,12 @@ class MeetingScheduler:
             return self.question_chain
         else:
             return input["input"]
+    
+    def set_txt_loader(self):
+        self.loader = TextLoader("./content.txt")
+        self.doc = self.loader.load()
+        self.vectorstore = Chroma.from_documents(documents=self.doc, embedding=OpenAIEmbeddings())
+        self.retriever = self.vectorstore.as_retriever()
 
     def submit_new_query(self, query):
         response = self.rag_chain.invoke({"input": query, "chat_history": self.chat_history})
